@@ -1,4 +1,9 @@
 import NextAuth from "next-auth"
+import { SupabaseAdapter } from "@auth/supabase-adapter"
+import jwt from "jsonwebtoken"
+
+const secret = process.env.NEXTAUTH_SECRET ??"";
+
 
 // import Apple from "next-auth/providers/apple"
 // import Atlassian from "next-auth/providers/atlassian"
@@ -22,7 +27,7 @@ import NextAuth from "next-auth"
 // import Foursquare from "next-auth/providers/foursquare"
 // import Freshbooks from "next-auth/providers/freshbooks"
 // import Fusionauth from "next-auth/providers/fusionauth"
-import GitHub from "next-auth/providers/github"
+// import GitHub from "next-auth/providers/github"
 // import Gitlab from "next-auth/providers/gitlab"
 // import Google from "next-auth/providers/google"
 // import Hubspot from "next-auth/providers/hubspot"
@@ -70,76 +75,75 @@ export const config = {
     logo: "https://next-auth.js.org/img/logo/logo-sm.png",
   },
   providers: [
-    // Apple,
-    // Atlassian,
-    // Auth0,
-    // Authentik,
-    // AzureAD,
-    // AzureB2C,
-    // Battlenet,
-    // Box,
-    // BoxyHQSAML,
-    // Bungie,
-    // Cognito,
-    // Coinbase,
-    // Discord,
-    // Dropbox,
-    // DuendeIDS6,
-    // Eveonline,
-    // Facebook,
-    // Faceit,
-    // FortyTwoSchool,
-    // Foursquare,
-    // Freshbooks,
-    // Fusionauth,
-    GitHub,
-    // Gitlab,
-    // Google,
-    // Hubspot,
-    // Instagram,
-    // Kakao,
-    // Keycloak,
-    // Line,
-    // LinkedIn,
-    // Mailchimp,
-    // Mailru,
-    // Medium,
-    // Naver,
-    // Netlify,
-    // Okta,
-    // Onelogin,
-    // Osso,
-    // Osu,
-    // Passage,
-    // Patreon,
-    // Pinterest,
-    // Pipedrive,
-    // Reddit,
-    // Salesforce,
-    // Slack,
-    // Spotify,
-    // Strava,
-    // Todoist,
-    // Trakt,
-    // Twitch,
-    // Twitter,
-    // UnitedEffects,
-    // Vk,
-    // Wikimedia,
-    // Wordpress,
-    // WorkOS,
-    // Yandex,
-    // Zitadel,
-    // Zoho,
-    // Zoom,
+    {
+          id: "quickbooks",
+          name: "QuickBooks",
+          type: "oauth",
+          clientId: process.env.QB_CLIENT_ID,
+          clientSecret: process.env.QB_CLIENT_SECRET,
+          authorization: {
+            url: "https://appcenter.intuit.com/connect/oauth2",
+            params: {
+              scope: 'com.intuit.quickbooks.accounting openid email profile',
+              redirect_uri: process.env.QB_REDIRECT_URI,
+              // redirect_uri: 'http://localhost:3000/api/auth',
+              state: 'intuit'
+            },
+          },
+          token: "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+          userinfo: "https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}/companyinfo/${realmId}",
+          profile(profile: any) {
+            return {
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email,
+                image: profile.picture,
+                realmId: profile.realmId
+                // Include any additional profile fields you need from QuickBooks
+            }
+        },
+        },
+  
   ],
-  callbacks: {
-    authorized({ request, auth }) {
-      const { pathname } = request.nextUrl
-      if (pathname === "/middleware-example") return !!auth
-      return true
-    },
+  adapter: SupabaseAdapter({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    secret: process.env.NEXT_SECRET_SUPABASE_ROLE_KEY ??"",
+    
+  }),
+  // pages: {
+  //   // signIn: '/signin',
+  //   signIn: '/connect',
+  //   // signOut: '/auth/signout',
+  //   error: '/connect/error', // Error code passed in query string as ?error=
+  //   verifyRequest: '/auth/verify-request', // (used for check email message)
+  //   newUser: '/auth/new-user' // New users will be directed here on// This is the redirect after successful Oauth 2 
+  // },
+  session: {
+    strategy: 'database',
   },
+  callbacks: {
+    async session({ session, user }) {
+      const signingSecret = process.env.SUPABASE_JWT_SECRET
+      if (signingSecret) {
+        const payload = {
+          aud: "authenticated",
+          exp: Math.floor(new Date(session.expires).getTime() / 1000),
+          sub: user.id,
+          email: user.email,
+          role: "authenticated",
+        }
+        session.supabaseAccessToken = jwt.sign(payload, signingSecret)
+      }
+      return session
+    },
+
+    // authorized({ request, auth }) {
+    //   const { pathname } = request.nextUrl
+    //   if (pathname === "api-example") return !!auth // It works no errors
+    //   return true
+    // },
+  },
+  secret
 } satisfies NextAuthConfig
 
 export const { handlers, auth, signIn, signOut } = NextAuth(config)
