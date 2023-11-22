@@ -18,6 +18,7 @@ import type { NextAuthConfig } from "next-auth"
 
 
 export const config = {
+  debug: true,
   theme: {
     logo: "https://next-auth.js.org/img/logo/logo-sm.png",
   },
@@ -41,12 +42,15 @@ export const config = {
           checks: ["pkce", "state"],
           userinfo: "https://sandbox-accounts.intuit.com/v1/openid_connect/userinfo",
           profile(profile: any) {
+            console.log("QuickBooks Profile:", profile);
+
             return {
-              id: profile.sub,
+              id: profile.id,
               name: profile.name,
               email: profile.email,
               image: profile.picture,
                 // Include any additional profile fields you need from QuickBooks
+                ...profile
             }
         },
         },
@@ -67,8 +71,17 @@ export const config = {
     strategy: 'database',
   },
   callbacks: {
+    async jwt ({token, user, account, profile, isNewUser}){
+      if (isNewUser) {
+        token.user = user;
+      }
+      return token
+    },
     async session({ session, user }) {
-      const signingSecret = process.env.SUPABASE_JWT_SECRET
+      console.log("Session Callback - User:", user);
+      console.log("Session Callback - Session:", session);
+
+      const signingSecret = process.env.NEXT_SECRET_SUPABASE_JWT
       if (signingSecret) {
         const payload = {
           aud: "authenticated",
@@ -78,12 +91,31 @@ export const config = {
           role: "authenticated",
         }
         session.supabaseAccessToken = jwt.sign(payload, signingSecret)
+        console.log("Session Callback - SupabaseAccessToken:", session.supabaseAccessToken);
+
       }
+      console.log("session", session && user)
       return session
     },
+  
+    // async session({ session, user }) {
+    //   const signingSecret = process.env.SUPABASE_JWT_SECRET
+    //   if (signingSecret) {
+    //     const payload = {
+    //       aud: "authenticated",
+    //       exp: Math.floor(new Date(session.expires).getTime() / 1000),
+    //       sub: user.id,
+    //       email: user.email,
+    //       role: "authenticated",
+    //     }
+    //     session.supabaseAccessToken = jwt.sign(payload, signingSecret)
+    //   }
+    //   return session
+    // },
   
   },
   secret
 } satisfies NextAuthConfig
 
 export const { handlers, auth, signIn, signOut } = NextAuth(config)
+
