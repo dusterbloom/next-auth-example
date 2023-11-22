@@ -1,7 +1,11 @@
 import NextAuth from "next-auth"
 import { SupabaseAdapter } from "@auth/supabase-adapter"
-import jwt from "jsonwebtoken"
-
+import {
+  Adapter,
+  AdapterSession,
+  AdapterUser,
+  VerificationToken,
+} from "@auth/core/adapters"
 const secret = process.env.NEXTAUTH_SECRET ??"";
 
 
@@ -29,7 +33,7 @@ const secret = process.env.NEXTAUTH_SECRET ??"";
 // import Fusionauth from "next-auth/providers/fusionauth"
 // import GitHub from "next-auth/providers/github"
 // import Gitlab from "next-auth/providers/gitlab"
-// import Google from "next-auth/providers/google"
+import Google from "next-auth/providers/google"
 // import Hubspot from "next-auth/providers/hubspot"
 // import Instagram from "next-auth/providers/instagram"
 // import Kakao from "next-auth/providers/kakao"
@@ -70,6 +74,8 @@ const secret = process.env.NEXTAUTH_SECRET ??"";
 
 import type { NextAuthConfig } from "next-auth"
 
+
+
 export const config = {
   theme: {
     logo: "https://next-auth.js.org/img/logo/logo-sm.png",
@@ -96,20 +102,24 @@ export const config = {
             return {
                 id: profile.sub,
                 name: profile.name,
-                email: profile.email,
-                image: profile.picture,
-                realmId: profile.realmId
+                email: profile.email
                 // Include any additional profile fields you need from QuickBooks
             }
         },
         },
+        
+        Google({
+          clientId: process.env.GOOGLE_ID ?? '',
+          clientSecret: process.env.GOOGLE_SECRET ?? '',
+        }),
   
   ],
   adapter: SupabaseAdapter({
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-    secret: process.env.NEXT_SECRET_SUPABASE_ROLE_KEY ??"",
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    secret: process.env.NEXT_SECRET_SUPABASE_ROLE_KEY ?? '',
     
-  }),
+    
+  }) as Adapter, 
   // pages: {
   //   // signIn: '/signin',
   //   signIn: '/connect',
@@ -122,20 +132,20 @@ export const config = {
     strategy: 'database',
   },
   callbacks: {
-    async session({ session, user }) {
-      const signingSecret = process.env.SUPABASE_JWT_SECRET
-      if (signingSecret) {
-        const payload = {
-          aud: "authenticated",
-          exp: Math.floor(new Date(session.expires).getTime() / 1000),
-          sub: user.id,
-          email: user.email,
-          role: "authenticated",
-        }
-        session.supabaseAccessToken = jwt.sign(payload, signingSecret)
-      }
-      return session
-    },
+    // async session({ session, user }) {
+    //   const signingSecret = process.env.NEXT_SECRET_SUPABASE_JWT
+    //   if (signingSecret) {
+    //     const payload = {
+    //       aud: "authenticated",
+    //       exp: Math.floor(new Date(session.expires).getTime() / 1000),
+    //       sub: user.id,
+    //       email: user.email,
+    //       role: "authenticated",
+    //     }
+    //     session.supabaseAccessToken = jwt.sign(payload, signingSecret)
+    //   }
+    //   return session
+    // },
 
     // authorized({ request, auth }) {
     //   const { pathname } = request.nextUrl

@@ -3,6 +3,12 @@ import CustomLink from "@/components/custom-link"
 import { useEffect, useState } from "react"
 
 export default function Page() {
+  
+
+ 
+
+
+  
   const [data, setData] = useState()
   useEffect(() => {
     ;(async () => {
@@ -11,6 +17,8 @@ export default function Page() {
       setData(json)
     })()
   }, [])
+  
+ 
   return (
     <div className="space-y-2">
       <h1 className="text-3xl font-bold">Route Handler Usage</h1>
